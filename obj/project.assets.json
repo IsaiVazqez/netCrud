@@ -11082,19 +11082,19 @@
     ]
   },
   "packageFolders": {
-    "/Users/mac/.nuget/packages/": {}
+    "/Users/isaivazquez/.nuget/packages/": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/mac/Documents/net/crud/MiApi/MiApi.csproj",
+      "projectUniqueName": "/Users/isaivazquez/Code/net/backend/netCrud/MiApi.csproj",
       "projectName": "MiApi",
-      "projectPath": "/Users/mac/Documents/net/crud/MiApi/MiApi.csproj",
-      "packagesPath": "/Users/mac/.nuget/packages/",
-      "outputPath": "/Users/mac/Documents/net/crud/MiApi/obj/",
+      "projectPath": "/Users/isaivazquez/Code/net/backend/netCrud/MiApi.csproj",
+      "packagesPath": "/Users/isaivazquez/.nuget/packages/",
+      "outputPath": "/Users/isaivazquez/Code/net/backend/netCrud/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "/Users/mac/.nuget/NuGet/NuGet.Config"
+        "/Users/isaivazquez/.nuget/NuGet/NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net7.0"

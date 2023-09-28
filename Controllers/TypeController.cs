@@ -1,3 +1,4 @@
+using MiApi.Dtos;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -5,39 +6,63 @@ namespace MiApi.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class TipoPersonaController : ControllerBase
+    public class TypePersonController : ControllerBase
     {
-        private readonly ApplicationContext _context; 
+        private readonly ApplicationContext _context;
 
-        public TipoPersonaController(ApplicationContext context)
+        public TypePersonController(ApplicationContext context)
         {
             _context = context;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<TipoPersona>>> GetAllTipoPersonas()
+        public async Task<ActionResult<IEnumerable<TipoPersonaDTO>>> GetAllTipoPersonas()
         {
-            return await _context.TipoPersona.ToListAsync();
+            var tipoPersonas = await _context.TipoPersona.ToListAsync();
+
+            // Transformamos cada TipoPersona a un TipoPersonaDTO
+            var tipoPersonasDto = tipoPersonas.Select(tp => new TipoPersonaDTO
+            {
+                Id = tp.Id,
+                Nombre = tp.Nombre
+            }).ToList();
+
+            return Ok(tipoPersonasDto);
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<TipoPersona>> GetTipoPersona(int id)
+        public async Task<ActionResult<TipoPersonaDTO>> GetTipoPersona(int id)
         {
             var tipoPersona = await _context.TipoPersona.FindAsync(id);
-            
+
             if (tipoPersona == null)
             {
                 return NotFound();
             }
-            return tipoPersona;
+
+            // Transformamos el TipoPersona a un TipoPersonaDTO
+            var tipoPersonaDto = new TipoPersonaDTO
+            {
+                Id = tipoPersona.Id,
+                Nombre = tipoPersona.Nombre
+            };
+
+            return Ok(tipoPersonaDto);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateTipoPersona(int id, TipoPersona tipoPersona)
+        public async Task<IActionResult> UpdateTipoPersona(int id, UpdateTipoPersona updateTipoPersonaDto)
         {
-            if (id != tipoPersona.Id)
+            var tipoPersona = await _context.TipoPersona.FindAsync(id);
+
+            if (tipoPersona == null)
             {
-                return BadRequest("El ID proporcionado no coincide con el ID del objeto.");
+                return NotFound();
+            }
+
+            if (updateTipoPersonaDto.Nombre != null)
+            {
+                tipoPersona.Nombre = updateTipoPersonaDto.Nombre;
             }
 
             _context.Entry(tipoPersona).State = EntityState.Modified;
@@ -61,12 +86,17 @@ namespace MiApi.Controllers
             return NoContent();
         }
 
-
         [HttpPost]
-        public async Task<ActionResult<TipoPersona>> CreateTipoPersona(TipoPersona tipoPersona)
+        public async Task<ActionResult<TipoPersonaDTO>> CreateTipoPersona(TipoPersonaDTO tipoPersonaDto)
         {
+            var tipoPersona = new TipoPersona
+            {
+                Nombre = tipoPersonaDto.Nombre
+            };
+
             _context.TipoPersona.Add(tipoPersona);
             await _context.SaveChangesAsync();
+
             return CreatedAtAction(nameof(GetTipoPersona), new { id = tipoPersona.Id }, tipoPersona);
         }
 
@@ -82,13 +112,13 @@ namespace MiApi.Controllers
 
             if (_context.User.Any(u => u.TipoPersonaId == id))
             {
-                return BadRequest("Este tipo de persona ya está asignado a un usuario y no puede ser eliminado.");
+                return BadRequest(new { message = "Este tipo de persona ya está asignado a un usuario y no puede ser eliminado." });
             }
 
             _context.TipoPersona.Remove(tipoPersona);
             await _context.SaveChangesAsync();
+
             return NoContent();
         }
-
     }
 }
