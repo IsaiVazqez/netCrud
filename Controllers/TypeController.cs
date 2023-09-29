@@ -20,7 +20,6 @@ namespace MiApi.Controllers
         {
             var tipoPersonas = await _context.TipoPersona.ToListAsync();
 
-            // Transformamos cada TipoPersona a un TipoPersonaDTO
             var tipoPersonasDto = tipoPersonas.Select(tp => new TipoPersonaDTO
             {
                 Id = tp.Id,
@@ -40,7 +39,6 @@ namespace MiApi.Controllers
                 return NotFound();
             }
 
-            // Transformamos el TipoPersona a un TipoPersonaDTO
             var tipoPersonaDto = new TipoPersonaDTO
             {
                 Id = tipoPersona.Id,

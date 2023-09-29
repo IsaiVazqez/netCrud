@@ -8,5 +8,7 @@ namespace MiApi.Dtos
         public string? Ciudad { get; set; }
         public string? Estado { get; set; }
         public TipoPersonaDTO TipoPersona { get; set; }
+        public string? TipoPersonaNombre { get; set; }
+
     }
 }

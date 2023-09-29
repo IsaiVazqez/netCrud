@@ -1,4 +1,6 @@
 using MiApi.Dtos;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,28 +16,38 @@ namespace MiApi.Controllers
         {
             _context = context;
         }
-
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<UserDTO>>> GetUsers()
+        public async Task<ActionResult<IEnumerable<UserDTO>>> GetAllUsers([FromQuery] int pageSize, [FromQuery] int pageNumber = 1)
         {
             var users = await _context.User.Include(u => u.TipoPersona).ToListAsync();
 
-            var userDTOs = users.Select(user => new UserDTO
+            var userDtos = users.Select(u => new UserDTO
             {
-                Id = user.Id,
-                Name = user.Name,
-                Email = user.Email,
-                Ciudad = user.Ciudad,
-                Estado = user.Estado,
+                Id = u.Id,
+                Name = u.Name,
+                Email = u.Email,
+                Ciudad = u.Ciudad,
+                Estado = u.Estado,
                 TipoPersona = new TipoPersonaDTO
                 {
-                    Id = user.TipoPersona.Id,
-                    Nombre = user.TipoPersona.Nombre
-                }
+                    Id = u.TipoPersonaId,
+                    Nombre = u.TipoPersona?.Nombre
+                },
+                TipoPersonaNombre = u.TipoPersona?.Nombre 
             }).ToList();
 
-            return Ok(userDTOs);
+            int totalRecords = userDtos.Count;
+            int totalPages = (int)Math.Ceiling(totalRecords / (double)pageSize);
+
+            var paginatedUserDtos = userDtos.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+
+            Response.Headers.Add("X-Total-Count", totalRecords.ToString());
+            Response.Headers.Add("X-Total-Pages", totalPages.ToString());
+
+            return Ok(paginatedUserDtos);
         }
+
+
 
         [HttpGet("{id}")]
         public async Task<ActionResult<UserDTO>> GetUser(int id)
@@ -113,10 +125,8 @@ namespace MiApi.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutUser(int id, UpdateUserDto updateUserDTO)
         {
-            // Debugging: Verificar el valor de TipoPersonaId recibido
             Console.WriteLine($"TipoPersonaId recibido: {updateUserDTO.TipoPersonaId}");
 
-            // Encuentra el usuario existente
             var user = await _context.User.FindAsync(id);
             if (user == null)
             {
@@ -129,7 +139,6 @@ namespace MiApi.Controllers
             user.Estado = updateUserDTO.Estado;
             user.TipoPersonaId = updateUserDTO.TipoPersonaId;
 
-            // Debugging: Verificar el valor de TipoPersonaId antes de guardar
             Console.WriteLine($"TipoPersonaId antes de guardar: {user.TipoPersonaId}");
 
             _context.Entry(user).State = EntityState.Modified;
