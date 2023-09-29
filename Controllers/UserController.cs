@@ -17,7 +17,7 @@ namespace MiApi.Controllers
             _context = context;
         }
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<UserDTO>>> GetAllUsers([FromQuery] int pageSize, [FromQuery] int pageNumber = 1)
+        public async Task<IActionResult> GetAllUsers([FromQuery] int pageSize, [FromQuery] int pageNumber = 1)
         {
             var users = await _context.User.Include(u => u.TipoPersona).ToListAsync();
 
@@ -33,20 +33,29 @@ namespace MiApi.Controllers
                     Id = u.TipoPersonaId,
                     Nombre = u.TipoPersona?.Nombre
                 },
-                TipoPersonaNombre = u.TipoPersona?.Nombre 
+                TipoPersonaNombre = u.TipoPersona?.Nombre
             }).ToList();
 
+            // Contar el total de registros y calcular el total de páginas
             int totalRecords = userDtos.Count;
             int totalPages = (int)Math.Ceiling(totalRecords / (double)pageSize);
 
+            // Paginar los resultados
             var paginatedUserDtos = userDtos.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+
+            var response = new
+            {
+                data = paginatedUserDtos,
+                total = totalRecords,
+                pageSize = pageSize,
+                pageNumber = pageNumber
+            };
 
             Response.Headers.Add("X-Total-Count", totalRecords.ToString());
             Response.Headers.Add("X-Total-Pages", totalPages.ToString());
 
-            return Ok(paginatedUserDtos);
+            return Ok(response);
         }
-
 
 
         [HttpGet("{id}")]
