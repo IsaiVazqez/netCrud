@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "/Users/isaivazquez/Code/net/backend/netCrud/MiApi.csproj": {}
+    "/Users/mac/Documents/net/crud/MiApi/MiApi.csproj": {}
   },
   "projects": {
-    "/Users/isaivazquez/Code/net/backend/netCrud/MiApi.csproj": {
+    "/Users/mac/Documents/net/crud/MiApi/MiApi.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/isaivazquez/Code/net/backend/netCrud/MiApi.csproj",
+        "projectUniqueName": "/Users/mac/Documents/net/crud/MiApi/MiApi.csproj",
         "projectName": "MiApi",
-        "projectPath": "/Users/isaivazquez/Code/net/backend/netCrud/MiApi.csproj",
-        "packagesPath": "/Users/isaivazquez/.nuget/packages/",
-        "outputPath": "/Users/isaivazquez/Code/net/backend/netCrud/obj/",
+        "projectPath": "/Users/mac/Documents/net/crud/MiApi/MiApi.csproj",
+        "packagesPath": "/Users/mac/.nuget/packages/",
+        "outputPath": "/Users/mac/Documents/net/crud/MiApi/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/Users/isaivazquez/.nuget/NuGet/NuGet.Config"
+          "/Users/mac/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net7.0"
@@ -38,6 +38,14 @@
         "net7.0": {
           "targetAlias": "net7.0",
           "dependencies": {
+            "ClosedXML": {
+              "target": "Package",
+              "version": "[0.102.1, )"
+            },
+            "EPPlus": {
+              "target": "Package",
+              "version": "[6.2.9, )"
+            },
             "Microsoft.AspNetCore.OpenApi": {
               "target": "Package",
               "version": "[7.0.3, )"

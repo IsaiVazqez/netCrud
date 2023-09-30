@@ -1,5 +1,6 @@
 using MiApi.Dtos;
 using System.Linq;
+using OfficeOpenXml;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -16,11 +17,20 @@ namespace MiApi.Controllers
         {
             _context = context;
         }
+
         [HttpGet]
-        public async Task<IActionResult> GetAllUsers([FromQuery] int pageSize, [FromQuery] int pageNumber = 1)
+        public async Task<IActionResult> GetAllUsers([FromQuery] int pageSize, [FromQuery] int pageNumber = 1, [FromQuery] string orderDirection = "desc")
         {
             var users = await _context.User.Include(u => u.TipoPersona).ToListAsync();
 
+            if (orderDirection.ToLower() == "asc")
+            {
+                users = users.OrderBy(u => u.Id).ToList();
+            }
+            else if (orderDirection.ToLower() == "desc")
+            {
+                users = users.OrderByDescending(u => u.Id).ToList();
+            }
             var userDtos = users.Select(u => new UserDTO
             {
                 Id = u.Id,
@@ -36,11 +46,10 @@ namespace MiApi.Controllers
                 TipoPersonaNombre = u.TipoPersona?.Nombre
             }).ToList();
 
-            // Contar el total de registros y calcular el total de páginas
             int totalRecords = userDtos.Count;
+
             int totalPages = (int)Math.Ceiling(totalRecords / (double)pageSize);
 
-            // Paginar los resultados
             var paginatedUserDtos = userDtos.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
 
             var response = new
@@ -52,6 +61,7 @@ namespace MiApi.Controllers
             };
 
             Response.Headers.Add("X-Total-Count", totalRecords.ToString());
+
             Response.Headers.Add("X-Total-Pages", totalPages.ToString());
 
             return Ok(response);
@@ -85,6 +95,48 @@ namespace MiApi.Controllers
             return userDTO;
         }
 
+        [HttpGet("ExportToExcel")]
+        public async Task<IActionResult> ExportToExcel()
+        {
+            var users = await _context.User.Include(u => u.TipoPersona).ToListAsync();
+
+            using (var package = new ExcelPackage())
+            {
+                var worksheet = package.Workbook.Worksheets.Add("Users");
+
+                worksheet.Cells[1, 1].Value = "ID";
+                worksheet.Cells[1, 2].Value = "Name";
+                worksheet.Cells[1, 3].Value = "Email";
+                worksheet.Cells[1, 4].Value = "Ciudad";
+                worksheet.Cells[1, 5].Value = "Estado";
+                worksheet.Cells[1, 6].Value = "Tipo de Persona"; // Agregamos la nueva columna aquí
+
+                for (int i = 0; i < users.Count; i++)
+                {
+                    var user = users[i];
+                    worksheet.Cells[i + 2, 1].Value = user.Id;
+                    worksheet.Cells[i + 2, 2].Value = user.Name;
+                    worksheet.Cells[i + 2, 3].Value = user.Email;
+                    worksheet.Cells[i + 2, 4].Value = user.Ciudad;
+                    worksheet.Cells[i + 2, 5].Value = user.Estado;
+                    worksheet.Cells[i + 2, 6].Value = user.TipoPersona?.Nombre ?? "N/A"; // Agregamos el valor aquí
+
+                }
+
+                var stream = new MemoryStream();
+                package.SaveAs(stream);
+
+                var content = stream.ToArray();
+
+                return File(
+                    content,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "Users.xlsx");
+            }
+        }
+
+
+
         [HttpPost]
         public async Task<ActionResult<UserDTO>> PostUser(CreateUserDto createUserDTO)
         {
@@ -109,6 +161,7 @@ namespace MiApi.Controllers
             Console.WriteLine($"TipoPersonaId antes de guardar: {user.TipoPersonaId}");
 
             _context.User.Add(user);
+
             await _context.SaveChangesAsync();
 
             UserDTO userDTO = new UserDTO
@@ -137,6 +190,7 @@ namespace MiApi.Controllers
             Console.WriteLine($"TipoPersonaId recibido: {updateUserDTO.TipoPersonaId}");
 
             var user = await _context.User.FindAsync(id);
+
             if (user == null)
             {
                 return NotFound();
