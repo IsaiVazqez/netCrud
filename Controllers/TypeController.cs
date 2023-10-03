@@ -2,121 +2,72 @@ using MiApi.Dtos;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
+
 namespace MiApi.Controllers
 {
     [ApiController]
     [Route("[controller]")]
     public class TypePersonController : ControllerBase
     {
-        private readonly ApplicationContext _context;
+        private readonly TypePersonService _tipoPersonaService;
 
-        public TypePersonController(ApplicationContext context)
+        public TypePersonController(TypePersonService tipoPersonaService)
         {
-            _context = context;
+            _tipoPersonaService = tipoPersonaService;
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<TipoPersonaDTO>>> GetAllTipoPersonas()
         {
-            var tipoPersonas = await _context.TipoPersona.ToListAsync();
-
-            var tipoPersonasDto = tipoPersonas.Select(tp => new TipoPersonaDTO
-            {
-                Id = tp.Id,
-                Nombre = tp.Nombre
-            }).ToList();
-
-            return Ok(tipoPersonasDto);
+            return Ok(await _tipoPersonaService.GetAllTipoPersonasAsync());
         }
+
 
         [HttpGet("{id}")]
         public async Task<ActionResult<TipoPersonaDTO>> GetTipoPersona(int id)
         {
-            var tipoPersona = await _context.TipoPersona.FindAsync(id);
-
-            if (tipoPersona == null)
+            var tipoPersonaDto = await _tipoPersonaService.GetTipoPersonaAsync(id);
+            if (tipoPersonaDto == null)
             {
                 return NotFound();
             }
-
-            var tipoPersonaDto = new TipoPersonaDTO
-            {
-                Id = tipoPersona.Id,
-                Nombre = tipoPersona.Nombre
-            };
-
             return Ok(tipoPersonaDto);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateTipoPersona(int id, UpdateTipoPersona updateTipoPersonaDto)
+        public async Task<IActionResult> UpdateTipoPersona(int id, UpdateTipoPersonaDTO updateTipoPersonaDto)
         {
-            var tipoPersona = await _context.TipoPersona.FindAsync(id);
-
-            if (tipoPersona == null)
+            var updatedTipoPersonaDto = await _tipoPersonaService.UpdateTipoPersonaAsync(id, updateTipoPersonaDto);
+            if (updatedTipoPersonaDto == null)
             {
                 return NotFound();
             }
-
-            if (updateTipoPersonaDto.Nombre != null)
-            {
-                tipoPersona.Nombre = updateTipoPersonaDto.Nombre;
-            }
-
-            _context.Entry(tipoPersona).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!_context.TipoPersona.Any(e => e.Id == id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
             return NoContent();
         }
 
         [HttpPost]
         public async Task<ActionResult<TipoPersonaDTO>> CreateTipoPersona(TipoPersonaDTO tipoPersonaDto)
         {
-            var tipoPersona = new TipoPersona
-            {
-                Nombre = tipoPersonaDto.Nombre
-            };
-
-            _context.TipoPersona.Add(tipoPersona);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetTipoPersona), new { id = tipoPersona.Id }, tipoPersona);
+            var createdTipoPersonaDto = await _tipoPersonaService.CreateTipoPersonaAsync(tipoPersonaDto);
+            return CreatedAtAction(nameof(GetTipoPersona), new { id = createdTipoPersonaDto.Id }, createdTipoPersonaDto);
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTipoPersona(int id)
         {
-            var tipoPersona = await _context.TipoPersona.FindAsync(id);
-
-            if (tipoPersona == null)
+            try
             {
-                return NotFound();
+                var success = await _tipoPersonaService.DeleteTipoPersonaAsync(id);
+                if (!success)
+                {
+                    return NotFound();
+                }
+                return NoContent();
             }
-
-            if (_context.User.Any(u => u.TipoPersonaId == id))
+            catch (InvalidOperationException ex)
             {
-                return BadRequest(new { message = "Este tipo de persona ya está asignado a un usuario y no puede ser eliminado." });
+                return BadRequest(new { message = ex.Message });
             }
-
-            _context.TipoPersona.Remove(tipoPersona);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
         }
     }
 }

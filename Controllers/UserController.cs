@@ -1,9 +1,8 @@
 using MiApi.Dtos;
-using System.Linq;
 using OfficeOpenXml;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using AutoMapper;
 
 namespace MiApi.Controllers
 {
@@ -11,45 +10,22 @@ namespace MiApi.Controllers
     [Route("[controller]")]
     public class UserController : ControllerBase
     {
+        private readonly UserService _userService;
         private readonly ApplicationContext _context;
 
-        public UserController(ApplicationContext context)
+        public UserController(ApplicationContext context, UserService userService)
         {
             _context = context;
+
+            _userService = userService;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAllUsers([FromQuery] int pageSize, [FromQuery] int pageNumber = 1, [FromQuery] string orderDirection = "desc")
         {
-            var users = await _context.User.Include(u => u.TipoPersona).ToListAsync();
-
-            if (orderDirection.ToLower() == "asc")
-            {
-                users = users.OrderBy(u => u.Id).ToList();
-            }
-            else if (orderDirection.ToLower() == "desc")
-            {
-                users = users.OrderByDescending(u => u.Id).ToList();
-            }
-            var userDtos = users.Select(u => new UserDTO
-            {
-                Id = u.Id,
-                Name = u.Name,
-                Email = u.Email,
-                Ciudad = u.Ciudad,
-                Estado = u.Estado,
-                TipoPersona = new TipoPersonaDTO
-                {
-                    Id = u.TipoPersonaId,
-                    Nombre = u.TipoPersona?.Nombre
-                },
-                TipoPersonaNombre = u.TipoPersona?.Nombre
-            }).ToList();
-
+            var userDtos = await _userService.GetAllUsersAsync(orderDirection);
             int totalRecords = userDtos.Count;
-
             int totalPages = (int)Math.Ceiling(totalRecords / (double)pageSize);
-
             var paginatedUserDtos = userDtos.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
 
             var response = new
@@ -61,39 +37,23 @@ namespace MiApi.Controllers
             };
 
             Response.Headers.Add("X-Total-Count", totalRecords.ToString());
-
             Response.Headers.Add("X-Total-Pages", totalPages.ToString());
 
             return Ok(response);
         }
 
-
         [HttpGet("{id}")]
         public async Task<ActionResult<UserDTO>> GetUser(int id)
         {
-            var user = await _context.User.Include(u => u.TipoPersona).FirstOrDefaultAsync(u => u.Id == id);
-
-            if (user == null)
+            var userDTO = await _userService.GetUserByIdAsync(id);
+            if (userDTO == null)
             {
                 return NotFound();
             }
 
-            var userDTO = new UserDTO
-            {
-                Id = user.Id,
-                Name = user.Name,
-                Email = user.Email,
-                Ciudad = user.Ciudad,
-                Estado = user.Estado,
-                TipoPersona = new TipoPersonaDTO
-                {
-                    Id = user.TipoPersona.Id,
-                    Nombre = user.TipoPersona.Nombre
-                }
-            };
-
             return userDTO;
         }
+
 
         [HttpGet("ExportToExcel")]
         public async Task<IActionResult> ExportToExcel()
@@ -109,7 +69,7 @@ namespace MiApi.Controllers
                 worksheet.Cells[1, 3].Value = "Email";
                 worksheet.Cells[1, 4].Value = "Ciudad";
                 worksheet.Cells[1, 5].Value = "Estado";
-                worksheet.Cells[1, 6].Value = "Tipo de Persona"; // Agregamos la nueva columna aquí
+                worksheet.Cells[1, 6].Value = "Tipo de Persona";
 
                 for (int i = 0; i < users.Count; i++)
                 {
@@ -119,7 +79,7 @@ namespace MiApi.Controllers
                     worksheet.Cells[i + 2, 3].Value = user.Email;
                     worksheet.Cells[i + 2, 4].Value = user.Ciudad;
                     worksheet.Cells[i + 2, 5].Value = user.Estado;
-                    worksheet.Cells[i + 2, 6].Value = user.TipoPersona?.Nombre ?? "N/A"; // Agregamos el valor aquí
+                    worksheet.Cells[i + 2, 6].Value = user.TipoPersona?.Nombre ?? "N/A";
 
                 }
 
@@ -135,114 +95,33 @@ namespace MiApi.Controllers
             }
         }
 
-
-
         [HttpPost]
-        public async Task<ActionResult<UserDTO>> PostUser(CreateUserDto createUserDTO)
+        public async Task<ActionResult<UserDTO>> PostUser(CreateUserDTO createUserDTO)
         {
-            Console.WriteLine($"TipoPersonaId recibido: {createUserDTO.TipoPersonaId}");
-
-            User user = new User
-            {
-                Name = createUserDTO.Name,
-                Email = createUserDTO.Email,
-                Ciudad = createUserDTO.Ciudad,
-                Estado = createUserDTO.Estado,
-                TipoPersonaId = createUserDTO.TipoPersonaId
-            };
-
-            TipoPersona tipoPersona = _context.TipoPersona.Find(user.TipoPersonaId);
-
-            if (tipoPersona == null)
-            {
-                user.TipoPersonaId = tipoPersona?.Id ?? 0;
-            }
-
-            Console.WriteLine($"TipoPersonaId antes de guardar: {user.TipoPersonaId}");
-
-            _context.User.Add(user);
-
-            await _context.SaveChangesAsync();
-
-            UserDTO userDTO = new UserDTO
-            {
-                Id = user.Id,
-                Name = user.Name,
-                Email = user.Email,
-                Ciudad = user.Ciudad,
-                Estado = user.Estado,
-                TipoPersona = new TipoPersonaDTO
-                {
-                    Id = user.TipoPersonaId,
-                    Nombre = _context.TipoPersona.FirstOrDefault(tp => tp.Id == user.TipoPersonaId)?.Nombre
-                }
-            };
-
+            var userDTO = await _userService.CreateUserAsync(createUserDTO);
             return CreatedAtAction("GetUser", new { id = userDTO.Id }, userDTO);
         }
 
-
-
-        // PUT: api/User/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutUser(int id, UpdateUserDto updateUserDTO)
+        public async Task<IActionResult> PutUser(int id, UpdateUserDTO updateUserDTO)
         {
-            Console.WriteLine($"TipoPersonaId recibido: {updateUserDTO.TipoPersonaId}");
-
-            var user = await _context.User.FindAsync(id);
-
-            if (user == null)
+            var updatedUserDTO = await _userService.UpdateUserAsync(id, updateUserDTO);
+            if (updatedUserDTO == null)
             {
                 return NotFound();
             }
-
-            user.Name = updateUserDTO.Name;
-            user.Email = updateUserDTO.Email;
-            user.Ciudad = updateUserDTO.Ciudad;
-            user.Estado = updateUserDTO.Estado;
-            user.TipoPersonaId = updateUserDTO.TipoPersonaId;
-
-            Console.WriteLine($"TipoPersonaId antes de guardar: {user.TipoPersonaId}");
-
-            _context.Entry(user).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!UserExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
             return NoContent();
         }
-
+        
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteUser(int id)
         {
-            var user = await _context.User.FindAsync(id);
-            if (user == null)
+            var result = await _userService.DeleteUserAsync(id);
+            if (!result)
             {
                 return NotFound();
             }
-
-            _context.User.Remove(user);
-            await _context.SaveChangesAsync();
-
             return NoContent();
-        }
-
-        private bool UserExists(int id)
-        {
-            return _context.User.Any(e => e.Id == id);
         }
     }
 
