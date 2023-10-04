@@ -54,6 +54,10 @@
               "target": "Package",
               "version": "[0.102.1, )"
             },
+            "CloudinaryDotNet": {
+              "target": "Package",
+              "version": "[1.22.0, )"
+            },
             "EPPlus": {
               "target": "Package",
               "version": "[6.2.9, )"
