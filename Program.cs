@@ -4,6 +4,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<TypePersonService>();
 builder.Services.AddDbContext<ApplicationContext>(); 
 builder.Services.AddControllers();
