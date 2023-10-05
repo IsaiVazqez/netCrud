@@ -29,7 +29,6 @@ public class ProductsController : ControllerBase
 
     }
 
-    // GET: api/Products
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ProductDTO>>> GetProducts()
     {
@@ -38,20 +37,19 @@ public class ProductsController : ControllerBase
     }
 
     // GET: api/Products/5
-[HttpGet("{id}")]
-public async Task<ActionResult<ProductDTO>> GetProduct(int id)
-{
-    var product = await _context.Product.Include(p => p.Image).FirstOrDefaultAsync(p => p.Id == id);
-
-    if (product == null)
+    [HttpGet("{id}")]
+    public async Task<ActionResult<ProductDTO>> GetProduct(int id)
     {
-        return NotFound();
+        var product = await _context.Product.Include(p => p.Image).FirstOrDefaultAsync(p => p.Id == id);
+
+        if (product == null)
+        {
+            return NotFound();
+        }
+
+        return _mapper.Map<ProductDTO>(product);
     }
 
-    return _mapper.Map<ProductDTO>(product);
-}
-
-    // POST: api/Products
     [HttpPost]
     public async Task<ActionResult<ProductDTO>> CreateProductCreateProduct([FromForm] CreateProductDTO createProductDto)
     {
@@ -88,14 +86,29 @@ public async Task<ActionResult<ProductDTO>> GetProduct(int id)
 
     }
 
-    // PUT: api/Products/5
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateProduct(int id, Product product)
+    public async Task<IActionResult> UpdateProduct(int id, [FromForm] UpdateProductDTO updateProductDto)
     {
-        if (id != product.Id)
+        var product = await _context.Product.Include(p => p.Image).FirstOrDefaultAsync(p => p.Id == id);
+
+        if (product == null)
         {
-            return BadRequest();
+            return NotFound();
         }
+
+        if (updateProductDto.ImageFile != null)
+        {
+            var filePath = Path.Combine(_localImagePath, updateProductDto.ImageFile.FileName);
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await updateProductDto.ImageFile.CopyToAsync(stream);
+            }
+
+            product.Image.Url = "/images/" + updateProductDto.ImageFile.FileName;
+        }
+
+        product.Nombre = updateProductDto.Nombre;
+        product.Precio = updateProductDto.Precio;
 
         _context.Entry(product).State = EntityState.Modified;
 
@@ -118,24 +131,47 @@ public async Task<ActionResult<ProductDTO>> GetProduct(int id)
         return NoContent();
     }
 
-    // DELETE: api/Products/5
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteProduct(int id)
     {
-        var product = await _context.Product.FindAsync(id);
+        var product = await _context.Product.Include(p => p.Image).FirstOrDefaultAsync(p => p.Id == id);
         if (product == null)
         {
             return NotFound();
         }
+        // Verificar si product.Image.Url y _hostingEnvironment.WebRootPath no son nulos o vacíos
+        if (!string.IsNullOrWhiteSpace(product.Image?.Url) && !string.IsNullOrWhiteSpace(_hostingEnvironment.WebRootPath))
+        {
+            // Obtener la ruta completa de la imagen
+            var imagePath = Path.Combine(_localImagePath, product.Image.Url.TrimStart('/'));
 
+            try
+            {
+                if (System.IO.File.Exists(imagePath))
+                {
+                    System.IO.File.Delete(imagePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Aquí puedes registrar la excepción o devolver un mensaje de error.
+                Console.WriteLine(ex.Message);
+            }
+        }
+
+        // Eliminar la entrada en Midier
+        _context.Midier.Remove(product.Image);
+
+        // Eliminar el producto
         _context.Product.Remove(product);
+
         await _context.SaveChangesAsync();
 
         return NoContent();
     }
-
     private bool ProductExists(int id)
     {
         return _context.Product.Any(e => e.Id == id);
     }
+
 }

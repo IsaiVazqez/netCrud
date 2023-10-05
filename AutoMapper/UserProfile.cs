@@ -7,10 +7,7 @@ public class UserProfile : Profile
     {
         CreateMap<User, UserDTO>()
             .ForMember(dest => dest.TipoPersona, opt => opt.MapFrom(src => new TipoPersonaDTO
-            {
-                Id = src.TipoPersonaId,
-                Nombre = src.TipoPersona.Nombre
-            }));
+            {Id = src.TipoPersonaId,Nombre = src.TipoPersona.Nombre}));
         CreateMap<CreateUserDTO, User>();
         CreateMap<UpdateUserDTO, User>();
         CreateMap<TipoPersona, TipoPersonaDTO>().ReverseMap();
@@ -25,6 +22,11 @@ public class UserProfile : Profile
         CreateMap<Product, ProductDTO>()
             .ForMember(dest => dest.Image, opt => opt.MapFrom(src => src.Image));
         CreateMap<Midier, MidierDTO>();
+        CreateMap<UpdateProductDTO, Product>();
+        CreateMap<Order, OrderReadDTO>()
+            .ForMember(dest => dest.Products, opt => opt.MapFrom(src => src.OrderProducts.Select(op => op.Product)));
+        CreateMap<CreateOrderDTO, Order>();
+        CreateMap<UpdateOrderDTO, Order>();
 
     }
 }
