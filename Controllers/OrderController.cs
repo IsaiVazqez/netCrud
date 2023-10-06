@@ -18,8 +18,13 @@ public class OrdersController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<OrderReadDTO>>> GetOrders()
     {
-        var orders = await _context.Order.Include(o => o.OrderProducts).ThenInclude(op => op.Product).ToListAsync();
-        return _mapper.Map<List<OrderReadDTO>>(orders);
+    var orders = await _context.Order
+                                .Include(o => o.User) 
+                               .Include(o => o.OrderProducts)
+                               .ThenInclude(op => op.Product)
+                               .ThenInclude(p => p.Image)
+                               .ToListAsync();
+    return _mapper.Map<List<OrderReadDTO>>(orders);
     }
 
     [HttpGet("{id}")]
@@ -53,4 +58,26 @@ public class OrdersController : ControllerBase
 
         return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, _mapper.Map<OrderReadDTO>(order));
     }
+
+    [HttpDelete("{id}")]
+    public async Task<ActionResult> DeleteOrder(int id)
+    {
+        var order = await _context.Order.FindAsync(id);
+
+        if (order == null)
+        {
+            return NotFound();
+        }
+
+        // Eliminar registros relacionados en OrderProduct
+        var orderProducts = _context.OrderProduct.Where(op => op.OrderId == id);
+        _context.OrderProduct.RemoveRange(orderProducts);
+
+        // Eliminar el Order
+        _context.Order.Remove(order);
+        await _context.SaveChangesAsync();
+
+        return NoContent(); // Retorna un 204 No Content para indicar que la operación fue exitosa pero no hay contenido para devolver.
+    }
+
 }

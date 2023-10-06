@@ -1,4 +1,5 @@
 using AspNetCoreRateLimit;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,7 +33,14 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseStaticFiles();
+var imageFolderPath = Path.Combine(builder.Environment.ContentRootPath, "Images");
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(imageFolderPath),
+    RequestPath = "/images"
+});
+
 app.UseHttpsRedirection();
 app.UseIpRateLimiting();
 app.UseAuthorization();

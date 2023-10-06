@@ -32,33 +32,75 @@ public class ProductService
         var product = await _context.Product.Include(p => p.Image).FirstOrDefaultAsync(p => p.Id == id);
         return _mapper.Map<ProductDTO>(product);
     }
-
-public async Task<ProductDTO> CreateProductAsync(CreateProductDTO createProductDto)
+    public async Task<ProductDTO> CreateProductAsync(CreateProductDTO createProductDto)
     {
-        var filePath = Path.Combine(_localImagePath, createProductDto.ImageFile.FileName);
-        using (var stream = new FileStream(filePath, FileMode.Create))
+        BaseResponse baseResponse = new BaseResponse();
+        var acceptedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
+
+        // Validar que el archivo no es nulo
+        if (createProductDto.ImageFile == null)
         {
-            await createProductDto.ImageFile.CopyToAsync(stream);
+            baseResponse.ErrorInformation = new ErrorInformation()
+            {
+                ErrorDescription = "No hay ningún archivo que guardar en el servidor. Seleccione un archivo he intente nuevamente"
+            };
+            throw new Exception(baseResponse.ErrorInformation.ErrorDescription);
         }
 
-        var midier = new Midier
-        {
-            Url = "/images/" + createProductDto.ImageFile.FileName
-        };
-        _context.Midier.Add(midier);
-        await _context.SaveChangesAsync();
+        string fileExtension = Path.GetExtension(createProductDto.ImageFile.FileName);
 
-        var product = new Product
+        // Validar que la extensión del archivo sea aceptada
+        if (!acceptedExtensions.Contains(fileExtension.ToLower()))
         {
-            Nombre = createProductDto.Nombre,
-            Precio = createProductDto.Precio,
-            IdImage = midier.Id
-        };
-        _context.Product.Add(product);
-        await _context.SaveChangesAsync();
+            baseResponse.ErrorInformation = new ErrorInformation()
+            {
+                ErrorDescription = "El archivo es de una extensión no permitida por el sistema. Archivos permitidos: " + string.Join(", ", acceptedExtensions)
+            };
+            throw new Exception(baseResponse.ErrorInformation.ErrorDescription);
+        }
 
-        return _mapper.Map<ProductDTO>(product);
+        var filePath = Path.Combine(_localImagePath, createProductDto.ImageFile.FileName);
+
+        try
+        {
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await createProductDto.ImageFile.CopyToAsync(stream);
+            }
+
+            var midier = new Midier
+            {
+                Url = "/images/" + createProductDto.ImageFile.FileName
+            };
+
+            _context.Midier.Add(midier);
+            await _context.SaveChangesAsync();
+
+            var product = new Product
+            {
+                Nombre = createProductDto.Nombre,
+                Precio = createProductDto.Precio,
+                IdImage = midier.Id
+            };
+            _context.Product.Add(product);
+            await _context.SaveChangesAsync();
+
+            return _mapper.Map<ProductDTO>(product);
+        }
+        catch (DirectoryNotFoundException)
+        {
+            throw new Exception("El directorio donde se almacenan los archivos no existe. Por favor contante con el administrador de la aplicación para resolver el problema.");
+        }
+        catch (PathTooLongException)
+        {
+            throw new Exception("No es posible guardar el archivo debido a que contiene un nombre muy largo (máximo 219 caracteres). Cambie el nombre del archivo he intente nuevamente.");
+        }
+        catch (Exception)
+        {
+            throw new Exception("Ocurrió un error al momento de guardar el archivo. La operación no fue realizada. Recargue la página he intente nuevamente.");
+        }
     }
+
 
     public async Task UpdateProductAsync(int id, UpdateProductDTO updateProductDto)
     {

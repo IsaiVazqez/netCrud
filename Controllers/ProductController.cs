@@ -13,7 +13,7 @@ using System.Drawing;
 [Route("[controller]")]
 public class ProductsController : ControllerBase
 {
-      private readonly ProductService _productService;
+    private readonly ProductService _productService;
 
     public ProductsController(ProductService productService)
     {
@@ -37,13 +37,19 @@ public class ProductsController : ControllerBase
         return product;
     }
 
-     [HttpPost]
+    [HttpPost]
     public async Task<ActionResult<ProductDTO>> CreateProduct([FromForm] CreateProductDTO createProductDto)
     {
-        var product = await _productService.CreateProductAsync(createProductDto);
-        return CreatedAtAction(nameof(GetProduct), new { id = product.Id }, product);
+        try
+        {
+            var product = await _productService.CreateProductAsync(createProductDto);
+            return CreatedAtAction(nameof(GetProduct), new { id = product.Id }, product);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
-
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateProduct(int id, [FromForm] UpdateProductDTO updateProductDto)
     {

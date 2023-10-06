@@ -24,6 +24,7 @@ public class UserProfile : Profile
         CreateMap<Midier, MidierDTO>();
         CreateMap<UpdateProductDTO, Product>();
         CreateMap<Order, OrderReadDTO>()
+            .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.Name))  // Mapea el nombre del usuario
             .ForMember(dest => dest.Products, opt => opt.MapFrom(src => src.OrderProducts.Select(op => op.Product)));
         CreateMap<CreateOrderDTO, Order>();
         CreateMap<UpdateOrderDTO, Order>();
