@@ -37,7 +37,6 @@ public class ProductService
         BaseResponse baseResponse = new BaseResponse();
         var acceptedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
 
-        // Validar que el archivo no es nulo
         if (createProductDto.ImageFile == null)
         {
             baseResponse.ErrorInformation = new ErrorInformation()
@@ -49,7 +48,6 @@ public class ProductService
 
         string fileExtension = Path.GetExtension(createProductDto.ImageFile.FileName);
 
-        // Validar que la extensión del archivo sea aceptada
         if (!acceptedExtensions.Contains(fileExtension.ToLower()))
         {
             baseResponse.ErrorInformation = new ErrorInformation()
@@ -95,10 +93,16 @@ public class ProductService
         {
             throw new Exception("No es posible guardar el archivo debido a que contiene un nombre muy largo (máximo 219 caracteres). Cambie el nombre del archivo he intente nuevamente.");
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            throw new Exception("Ocurrió un error al momento de guardar el archivo. La operación no fue realizada. Recargue la página he intente nuevamente.");
+            var errorMessage = "Ocurrió un error específico: " + ex.Message;
+            if (ex.InnerException != null)
+            {
+                errorMessage += " Detalle: " + ex.InnerException.Message;
+            }
+            throw new Exception(errorMessage);
         }
+
     }
 
 

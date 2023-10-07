@@ -50,6 +50,8 @@ public class ProductsController : ControllerBase
             return BadRequest(new { message = ex.Message });
         }
     }
+
+    
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateProduct(int id, [FromForm] UpdateProductDTO updateProductDto)
     {

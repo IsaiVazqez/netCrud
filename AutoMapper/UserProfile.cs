@@ -7,7 +7,7 @@ public class UserProfile : Profile
     {
         CreateMap<User, UserDTO>()
             .ForMember(dest => dest.TipoPersona, opt => opt.MapFrom(src => new TipoPersonaDTO
-            {Id = src.TipoPersonaId,Nombre = src.TipoPersona.Nombre}));
+            { Id = src.TipoPersonaId, Nombre = src.TipoPersona.Nombre }));
         CreateMap<CreateUserDTO, User>();
         CreateMap<UpdateUserDTO, User>();
         CreateMap<TipoPersona, TipoPersonaDTO>().ReverseMap();
@@ -23,11 +23,33 @@ public class UserProfile : Profile
             .ForMember(dest => dest.Image, opt => opt.MapFrom(src => src.Image));
         CreateMap<Midier, MidierDTO>();
         CreateMap<UpdateProductDTO, Product>();
-        CreateMap<Order, OrderReadDTO>()
-            .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.Name))  // Mapea el nombre del usuario
-            .ForMember(dest => dest.Products, opt => opt.MapFrom(src => src.OrderProducts.Select(op => op.Product)));
+ CreateMap<Order, OrderReadDTO>()
+    .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.Name))
+    .ForMember(dest => dest.Products, opt => opt.MapFrom(src => src.OrderProducts.Select(op => new ProductDTO
+    {
+        Id = op.Product.Id,
+        Nombre = op.Product.Nombre,
+        Precio = op.Product.Precio,
+        IdImage = op.Product.IdImage,
+        Quantity = op.Quantity,
+         Image = MapMidierToMidierDTO(op.Product.Image)
+    })));
+
         CreateMap<CreateOrderDTO, Order>();
         CreateMap<UpdateOrderDTO, Order>();
 
     }
+
+    private MidierDTO MapMidierToMidierDTO(Midier midier)
+{
+    if (midier == null)
+        return null;
+
+    return new MidierDTO
+    {
+        Id = midier.Id,
+        Url = midier.Url
+    };
+}
+
 }

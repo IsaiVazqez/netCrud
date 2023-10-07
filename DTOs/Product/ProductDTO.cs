@@ -4,5 +4,6 @@ public class ProductDTO
     public string Nombre { get; set; }
     public decimal Precio { get; set; }
     public int IdImage { get; set; }
+    public int? Quantity { get; set; }
     public MidierDTO Image { get; set; }
 }
