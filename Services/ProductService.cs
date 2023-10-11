@@ -1,4 +1,3 @@
-// services/ProductService.cs
 
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
@@ -34,77 +33,39 @@ public class ProductService
     }
     public async Task<ProductDTO> CreateProductAsync(CreateProductDTO createProductDto)
     {
-        BaseResponse baseResponse = new BaseResponse();
         var acceptedExtensions = new List<string> { ".jpg", ".jpeg", ".png" };
-
-        if (createProductDto.ImageFile == null)
-        {
-            baseResponse.ErrorInformation = new ErrorInformation()
-            {
-                ErrorDescription = "No hay ningún archivo que guardar en el servidor. Seleccione un archivo he intente nuevamente"
-            };
-            throw new Exception(baseResponse.ErrorInformation.ErrorDescription);
-        }
-
-        string fileExtension = Path.GetExtension(createProductDto.ImageFile.FileName);
-
-        if (!acceptedExtensions.Contains(fileExtension.ToLower()))
-        {
-            baseResponse.ErrorInformation = new ErrorInformation()
-            {
-                ErrorDescription = "El archivo es de una extensión no permitida por el sistema. Archivos permitidos: " + string.Join(", ", acceptedExtensions)
-            };
-            throw new Exception(baseResponse.ErrorInformation.ErrorDescription);
-        }
-
-        var filePath = Path.Combine(_localImagePath, createProductDto.ImageFile.FileName);
+        string imageUrl;
 
         try
         {
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await createProductDto.ImageFile.CopyToAsync(stream);
-            }
-
-            var midier = new Midier
-            {
-                Url = "/images/" + createProductDto.ImageFile.FileName
-            };
-
-            _context.Midier.Add(midier);
-            await _context.SaveChangesAsync();
-
-            var product = new Product
-            {
-                Nombre = createProductDto.Nombre,
-                Precio = createProductDto.Precio,
-                IdImage = midier.Id
-            };
-            _context.Product.Add(product);
-            await _context.SaveChangesAsync();
-
-            return _mapper.Map<ProductDTO>(product);
-        }
-        catch (DirectoryNotFoundException)
-        {
-            throw new Exception("El directorio donde se almacenan los archivos no existe. Por favor contante con el administrador de la aplicación para resolver el problema.");
-        }
-        catch (PathTooLongException)
-        {
-            throw new Exception("No es posible guardar el archivo debido a que contiene un nombre muy largo (máximo 219 caracteres). Cambie el nombre del archivo he intente nuevamente.");
+            imageUrl = await ImageHelper.SaveImageAsync(createProductDto.ImageFile, _localImagePath, acceptedExtensions);
         }
         catch (Exception ex)
         {
-            var errorMessage = "Ocurrió un error específico: " + ex.Message;
-            if (ex.InnerException != null)
-            {
-                errorMessage += " Detalle: " + ex.InnerException.Message;
-            }
-            throw new Exception(errorMessage);
+            _logger.LogError(ex, "Error al crear el producto");
+            throw;
         }
 
-    }
+        var midier = new Midier
+        {
+            Url = imageUrl
+        };
 
+        _context.Midier.Add(midier);
+        await _context.SaveChangesAsync();
+
+        var product = new Product
+        {
+            Nombre = createProductDto.Nombre,
+            Precio = createProductDto.Precio,
+            IdImage = midier.Id
+        };
+
+        _context.Product.Add(product);
+        await _context.SaveChangesAsync();
+
+        return _mapper.Map<ProductDTO>(product);
+    }
 
     public async Task UpdateProductAsync(int id, UpdateProductDTO updateProductDto)
     {
@@ -116,13 +77,8 @@ public class ProductService
 
         if (updateProductDto.ImageFile != null)
         {
-            var filePath = Path.Combine(_localImagePath, updateProductDto.ImageFile.FileName);
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await updateProductDto.ImageFile.CopyToAsync(stream);
-            }
-
-            product.Image.Url = "/images/" + updateProductDto.ImageFile.FileName;
+            var imageUrl = await ImageHelper.SaveImageAsync(updateProductDto.ImageFile, _localImagePath, new List<string> { ".jpg", ".jpeg", ".png" });
+            product.Image.Url = imageUrl;
         }
 
         product.Nombre = updateProductDto.Nombre;
@@ -131,6 +87,7 @@ public class ProductService
         _context.Entry(product).State = EntityState.Modified;
         await _context.SaveChangesAsync();
     }
+
 
     public async Task DeleteProductAsync(int id)
     {
